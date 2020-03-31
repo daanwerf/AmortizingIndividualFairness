@@ -12,3 +12,8 @@ def rel_baseline(data, iter, attention):
 #Integer Linear Program
 def ILP(data, x, y, z):
     return -1
+
+#Get the candidates
+def get_candidates():
+    return -1
+
