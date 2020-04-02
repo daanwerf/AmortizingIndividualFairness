@@ -1,8 +1,9 @@
 import numpy as np
+import pandas as pd
 from numpy.random import uniform, exponential, triangular
 
 
-def generate_uniform(n) -> np.array:
+def generate_uniform(n):
     return uniform(0, 1, n)
 
 
@@ -34,4 +35,17 @@ class SingleQueryDataset(object):
 
 class Synthetic(SingleQueryDataset):
     def __init__(self, method, n=100):
-        super(self.__class__, self).__init__(generate_data(method, n))
+        super().__init__(generate_data(method, n))
+
+
+class AirBNBSingleQuery(SingleQueryDataset):
+    def __init__(self, filename):
+        df = pd.read_csv(filename, usecols=['review_scores_rating'])
+        df.dropna(inplace=True)
+        relevance = df['review_scores_rating'].values
+
+        super().__init__(relevance)
+
+
+if __name__ == '__main__':
+    ds = AirBNBSingleQuery('datasets/Boston.csv')
