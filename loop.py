@@ -55,7 +55,7 @@ def run_model(r, w, theta):
 
     logger = get_simple_logger()
 
-    for iteration in range(1, 100):
+    for iteration in range(1, 5):
 
         ideal_ranking = np.argsort(r)[::-1]
         idcg = dcg(k, np.asarray(r)[ideal_ranking])

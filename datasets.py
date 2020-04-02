@@ -45,7 +45,3 @@ class AirBNBSingleQuery(SingleQueryDataset):
         relevance = df['review_scores_rating'].values
 
         super().__init__(relevance)
-
-
-if __name__ == '__main__':
-    ds = AirBNBSingleQuery('datasets/Boston.csv')
