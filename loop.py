@@ -5,6 +5,7 @@ from mip import Model, xsum, minimize, BINARY
 
 # original ranking
 from core import *
+from datasets import Synthetic
 
 
 def build_model(A, R, r, w, k, theta, idcg):
@@ -34,20 +35,20 @@ def build_model(A, R, r, w, k, theta, idcg):
     return m, x
 
 
-def convert_solution_to_ranking(x):
+def convert_solution_to_ranking(x, verbose=False):
     ranking = [-1 for i in x]
     I = range(0, len(x))
     for i in I:
-        out.write("[[ ")
+        if verbose: out.write("[[ ")
         for j in I:
-            out.write(f"{x[i][j].x} ")
+            if verbose: out.write(f"{x[i][j].x} ")
             if x[i][j].x == 1:
                 ranking[j] = i
-        out.write("]]\n")
+        if verbose: out.write("]]\n")
     return ranking
 
 
-def run_model(r, w, theta):
+def run_model(r, w, k, theta):
     # Attention so far
     A = list(np.zeros(len(r)))
     # Relevance so far
@@ -82,21 +83,42 @@ def run_model(r, w, theta):
 
             new_ranking_dcg = dcg(k, np.asarray(r)[new_ranking])
             new_ranking_ndcg = new_ranking_dcg / idcg
+            np.set_printoptions(precision=2)
+
             logger.info(f"---- (theta:{theta}) ITERATION: {iteration} ----")
             logger.info(f"Relevance r_i: \t\t\t\t\t\t{r}")
-            logger.info(f"Optimal ranking: \t\t\t\t\t{list(ideal_ranking)}")
-            logger.info(f"New ranking after iteration \t\t{new_ranking}")
+            logger.info(f"Optimal ranking: \t\t\t\t\t{ideal_ranking}")
+            logger.info(f"New ranking after iteration \t\t{np.asarray(new_ranking)}")
             logger.info(
                 f"New ranking DCG@{k},IDCG@{k}, NDCG@{k}: \t{new_ranking_dcg:0.3f}, {idcg:0.3f}, {new_ranking_ndcg:0.3f}")
-            logger.info(f"Attention accumulated: \t\t\t\t{A}")
-            logger.info(f"Relevance accumulated: \t\t\t\t{R}")
+            logger.info(f"Attention accumulated: \t\t\t\t{np.asarray(A)}")
+            logger.info(f"Relevance accumulated: \t\t\t\t{np.asarray(R)}")
 
 
-THETA = 0.8
-k = 3
-# Current relevance
-r = [4, 3, 2, 1, 1, 6]
-# Attention model
-w = attention_geometric(k, 0.5)
+def toy_model():
+    THETA = 0.8
+    k = 3
+    # Current relevance
+    r = [4, 3, 2, 1, 1, 6]
 
-run_model(r, w, THETA)
+    # Attention model
+    w = attention_geometric(k, 0.5)
+
+    run_model(r, w, k, THETA)
+
+
+def run_on_datasets():
+    THETA = 0.8
+    k = 3
+
+    ds = Synthetic("exponential", n=10)
+    r = ds.relevance
+
+    # Attention model
+    w = attention_geometric(k, 0.5)
+
+    run_model(r, w, k, THETA)
+
+
+if __name__ == '__main__':
+    run_on_datasets()
