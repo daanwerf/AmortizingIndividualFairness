@@ -10,7 +10,7 @@ def attention_model_singular():
 
 
 def dcg(k, r):
-    return (np.exp2(np.asarray(r)[0:k]) / np.log2(np.arange(2, k + 2))).sum()
+    return ((np.exp2((np.asarray(r))[0:k]) - 1) / np.log2(np.arange(2, k + 2))).sum()
 
 
 def ndcg(k, r_1, r_2):
