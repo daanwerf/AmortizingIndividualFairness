@@ -4,7 +4,7 @@ import numpy as np
 
 
 def attention_geometric(k: int, p: float):
-    return lambda j: p * (1 - p) ** (j - 1) if j < k else 0
+    return lambda j: p * (1 - p) ** j if j < k else 0
 
 
 def attention_model_singular():
@@ -19,10 +19,10 @@ def ndcg(k, r_1, r_2):
     return dcg(k, r_1) / dcg(k, r_2)
 
 
-def get_simple_logger(filename="out.log"):
+def get_simple_logger(filename="out.log", level=logging.INFO):
     # create logger
     logger = logging.getLogger('project logger')
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(level)
 
     formatter = logging.Formatter('%(message)s')
 
