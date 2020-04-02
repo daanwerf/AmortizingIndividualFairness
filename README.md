@@ -1,1 +1,2 @@
-# AmortizingIndividualFairness
+# Amortizing Individual Fairness in Ranking
+
