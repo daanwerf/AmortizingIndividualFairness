@@ -9,7 +9,7 @@ def generate_uniform(n):
     return uniform(0, 1, n)
 
 
-def generate_exponential(n, scale=1):
+def generate_exponential(n, scale=4):
     return exponential(scale, n)
 
 
@@ -31,6 +31,7 @@ class SingleQueryDataset(object):
         self.relevance = np.asarray(relevance)
         self.relevance.sort()
         self.relevance = relevance[::-1]
+        self.relevance /= self.relevance.sum()
 
         # generate baseline ranking p
         self.p = list(range(0, len(self.relevance)))
