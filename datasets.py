@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 from numpy.random import uniform, exponential, triangular
 
+SYNTHETIC_DATASET_TYPES = ["uniform", "linear", "exponential"]
+
 
 def generate_uniform(n):
     return uniform(0, 1, n)
@@ -20,7 +22,7 @@ def generate_data(method: str, n):
         return generate_uniform(n)
     elif method == "linear":
         return generate_linear(n)
-    elif method == 'exponential':
+    elif method == "exponential":
         return generate_exponential(n)
 
 
@@ -28,6 +30,7 @@ class SingleQueryDataset(object):
     def __init__(self, relevance):
         self.relevance = np.asarray(relevance)
         self.relevance.sort()
+        self.relevance = relevance[::-1]
 
         # generate baseline ranking p
         self.p = list(range(0, len(self.relevance)))
