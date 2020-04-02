@@ -24,5 +24,5 @@ if __name__ == '__main__':
     os.makedirs("plots", exist_ok=True)
     # dataset = AirBNBSingleQuery('data/Geneva.csv')
     dataset = Synthetic('exponential', n=1000000)
-    plot_single_query_dataset(dataset)
-    # plot_results("results/results.csv")
+    # plot_single_query_dataset(dataset)
+    plot_results("results/results.csv")

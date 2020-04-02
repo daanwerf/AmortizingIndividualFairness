@@ -6,6 +6,7 @@ SYNTHETIC_DATASET_TYPES = ["uniform", "linear", "exponential"]
 
 
 def generate_uniform(n):
+    return np.ones(n)
     return uniform(0, 1, n)
 
 
