@@ -1,0 +1,8 @@
+cffi==1.14.0
+mip==1.7.3
+numpy==1.18.2
+pandas==1.0.3
+pycparser==2.20
+python-dateutil==2.8.1
+pytz==2019.3
+six==1.14.0
