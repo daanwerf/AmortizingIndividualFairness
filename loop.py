@@ -1,5 +1,6 @@
 import math
 import os
+import sys
 from sys import stdout as out
 
 import pandas as pd
@@ -53,11 +54,25 @@ def compute_unfairness(A, R):
     return np.abs(np.asarray(A) - np.asarray(R)).sum()
 
 
+def prefilter(size, k, A, R, r):
+    retain_indices = np.argpartition(r, -k)[-k:]
+
+    attention_deficit_list = list(np.zeros(len(r)))
+    for i in range(len(r)):
+        if i in retain_indices:
+            attention_deficit_list[i] = -sys.maxsize
+        else:
+            attention_deficit_list[i] = A[i] - (R[i] + r[i])
+
+    return np.concatenate((retain_indices, np.argpartition(attention_deficit_list, -(size - k))[-(size - k):]))
+
+
 def run_model(r, w, k, theta):
     # Attention so far
     A = list(np.zeros(len(r)))
     # Relevance so far
     R = list(np.zeros(len(r)))
+    # Values for prefiltering
 
     logger = get_simple_logger(level=logging.DEBUG)
     results = []
@@ -67,7 +82,7 @@ def run_model(r, w, k, theta):
         ideal_ranking = np.argsort(r)[::-1]
         idcg = dcg(k, np.asarray(r)[ideal_ranking])
 
-        # TODO: PREFILTER
+        print(prefilter(10, k, A, R, r))
 
         m, x = build_model(A, R, r, w, k, theta, idcg)
         m.verbose = 0
