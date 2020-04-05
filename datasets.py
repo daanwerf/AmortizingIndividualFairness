@@ -1,13 +1,12 @@
 import numpy as np
 import pandas as pd
-from numpy.random import uniform, exponential, triangular
+from numpy.random import exponential, triangular
 
 SYNTHETIC_DATASET_TYPES = ["uniform", "linear", "exponential"]
 
 
 def generate_uniform(n):
     return np.ones(n)
-    return uniform(0, 1, n)
 
 
 def generate_exponential(n, scale=4):
