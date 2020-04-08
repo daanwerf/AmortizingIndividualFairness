@@ -1,12 +1,14 @@
 import math
 import os
-from sys import stdout as out
+from sys import stdout as out, maxsize
 
 import pandas as pd
 from mip import Model, xsum, minimize, BINARY
 
 from core import *
-from datasets import Synthetic
+from datasets import Synthetic, AirBNBSingleQuery
+
+np.set_printoptions(precision=2)
 
 
 def build_model(A, R, r, w, k, theta, idcg):
@@ -50,26 +52,38 @@ def convert_solution_to_ranking(x, verbose=False):
 
 
 def compute_unfairness(A, R):
-    return np.abs(np.asarray(A) - np.asarray(R)).sum()
+    return np.abs(np.asarray(A) - np.asarray(R))
 
 
-def run_model(r, w, k, theta):
+def prefilter_selection(A, R, r, D, k):
+    k_top_relevant = np.argsort(r)[::-1]
+    unfairness = np.asarray(A) - (np.asarray(R) + r)
+    unfairness[k_top_relevant[:k]] = -maxsize
+    selection = np.argsort(unfairness)[:D]
+    return selection
+
+
+def run_model(r, w, k, theta, D=20, iterations=350):
     # Attention so far
     A = list(np.zeros(len(r)))
     # Relevance so far
     R = list(np.zeros(len(r)))
 
-    logger = get_simple_logger(level=logging.DEBUG)
+    logger = get_simple_logger(level=logging.INFO)
+    # logger = get_simple_logger(level=logging.DEBUG)
     results = []
 
-    for iteration in range(1, 100):
+    for iteration in range(1, iterations):
 
         ideal_ranking = np.argsort(r)[::-1]
         idcg = dcg(k, np.asarray(r)[ideal_ranking])
 
-        # TODO: PREFILTER
+        selection = prefilter_selection(A, R, r, D, k)
+        _A = np.asarray(A)[selection]
+        _R = np.asarray(R)[selection]
+        _r = np.asarray(r)[selection]
 
-        m, x = build_model(A, R, r, w, k, theta, idcg)
+        m, x = build_model(_A, _R, _r, w, k, theta, idcg)
         m.verbose = 0
         m.optimize()
 
@@ -81,20 +95,18 @@ def run_model(r, w, k, theta):
 
             # array when the value on the i_th position indicates the subject at rank i
             new_ranking = convert_solution_to_ranking(x)
+            new_ranking = selection[new_ranking]
 
             # Add attention each subject receives
             for rank, subject in enumerate(new_ranking):
                 A[subject] += w(rank)
 
             # For single query this should be just factor (needs to be checked)
-            # for subject, relevance in enumerate(r):
-            #     R[subject] += relevance
             R = list(np.asarray(R) + np.asarray(r))
 
             new_ranking_dcg = dcg(k, np.asarray(r)[new_ranking])
             new_ranking_ndcg = new_ranking_dcg / idcg
-            unfairness = compute_unfairness(A, R)
-            np.set_printoptions(precision=2)
+            unfairness = compute_unfairness(A, R).sum()
 
             logger.info(f"---- (theta:{theta}, k:{k}) ITERATION: {iteration} ----")
             logger.info(f"Unfairness: \t\t\t\t\t\t{unfairness}")
@@ -135,15 +147,16 @@ def run_on_datasets():
     THETA = 0.6
     k = 1
 
-    ds = Synthetic("exponential", n=50)
+    ds = Synthetic("exponential", n=30000)
     ds = Synthetic("uniform", n=25)
+    ds = AirBNBSingleQuery("data/boston.csv")
     r = ds.relevance
 
     # Attention model
     # w = attention_geometric(25, 0.5)
     w = attention_model_singular()
 
-    results = run_model(r, w, k, THETA)
+    results = run_model(r, w, k, THETA, iterations=10000)
     store_results(results)
 
 
