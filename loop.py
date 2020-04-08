@@ -1,5 +1,6 @@
 import math
 import os
+from collections import namedtuple
 from sys import stdout as out, maxsize
 
 import pandas as pd
@@ -9,6 +10,8 @@ from core import *
 from datasets import Synthetic, AirBNBSingleQuery
 
 np.set_printoptions(precision=2)
+
+Experiment = namedtuple("Experiment", ['dataset', 'k', 'w', 'theta', 'iterations', 'D'])
 
 
 def build_model(A, R, r, w, k, theta, idcg):
