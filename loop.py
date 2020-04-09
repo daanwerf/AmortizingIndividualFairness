@@ -2,9 +2,11 @@ import math
 from collections import namedtuple
 from sys import stdout as out, maxsize
 
+import pandas as pd
 from mip import Model, xsum, minimize, BINARY
 
 from core import *
+from datasets import Synthetic
 
 np.set_printoptions(precision=2)
 logger = get_simple_logger(level=logging.INFO)
