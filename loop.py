@@ -23,7 +23,7 @@ def build_model(A, R, r, w, k, theta, idcg):
     x = [[m.add_var(var_type=BINARY) for j in I] for i in I]
 
     # Create optimization function
-    m.objective = minimize(xsum((A[i] * w(j) - (R[i] + r[i])) * x[i][j] for j in I for i in I))
+    m.objective = minimize(xsum(abs(A[i] * w(j) - (R[i] + r[i])) * x[i][j] for j in I for i in I))
 
     # Constraints
 
@@ -166,6 +166,6 @@ def run_experiment(exp: Experiment, include_baseline=True):
 
 if __name__ == '__main__':
     # Executing from this file is for debugging
-    exp = Experiment(Synthetic("uniform", n=300), 1, attention_model_singular(), [0.6, 0.8, 1.0], 200, 35)
+    exp = Experiment(Synthetic("uniform", n=300), 1, attention_model_singular(), [0.6, 0.8], 200, 35)
     df = run_experiment(exp)
     plot_results(df)
