@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import pandas as pd
 from numpy.random import exponential, triangular
@@ -39,13 +41,22 @@ class SingleQueryDataset(object):
 
 class Synthetic(SingleQueryDataset):
     def __init__(self, method, n=100):
+        self.method = method
+        self.n = n
         super().__init__(generate_data(method, n))
+
+    def __str__(self):
+        return f"syn-{self.method}_n={self.n}"
 
 
 class AirBNBSingleQuery(SingleQueryDataset):
     def __init__(self, filename):
+        self.name = os.path.basename(filename)
         df = pd.read_csv(filename, usecols=['review_scores_rating'])
         df.dropna(inplace=True)
         relevance = df['review_scores_rating'].values
 
         super().__init__(relevance)
+
+    def __str__(self):
+        return f"AirBNB-{self.name}"
