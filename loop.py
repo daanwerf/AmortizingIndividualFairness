@@ -5,7 +5,6 @@ from sys import stdout as out, maxsize
 from mip import Model, xsum, minimize, BINARY
 
 from core import *
-from visualizations import *
 
 np.set_printoptions(precision=2)
 logger = get_simple_logger(level=logging.INFO)
@@ -168,4 +167,4 @@ if __name__ == '__main__':
     # Executing from this file is for debugging
     exp = Experiment(Synthetic("uniform", n=300), 1, attention_model_singular(), [0.6, 0.8], 200, 35)
     df = run_experiment(exp)
-    plot_results(df)
+    # plot_results(df)
