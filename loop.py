@@ -1,17 +1,16 @@
 import math
-import os
 from collections import namedtuple
 from sys import stdout as out, maxsize
 
-import pandas as pd
 from mip import Model, xsum, minimize, BINARY
 
 from core import *
-from datasets import Synthetic, AirBNBSingleQuery
+from visualizations import *
 
 np.set_printoptions(precision=2)
+logger = get_simple_logger(level=logging.INFO)
 
-Experiment = namedtuple("Experiment", ['dataset', 'k', 'w', 'theta', 'iterations', 'D'])
+Experiment = namedtuple("Experiment", ['dataset', 'k', 'w', 'thetas', 'iterations', 'D'])
 
 
 def build_model(A, R, r, w, k, theta, idcg):
@@ -66,25 +65,40 @@ def prefilter_selection(A, R, r, D, k):
     return selection
 
 
+def relevance_model(r, w, iterations=350):
+    results = []
+    ideal_ranking = np.argsort(r)[::-1]
+    ranks = np.arange(0, len(r))
+
+    for it in range(0, iterations):
+        wvec = np.vectorize(lambda x: w(x) * it)
+        A = wvec(ranks)
+        R = r * it
+        unfairness = np.abs((R - A[ideal_ranking])).sum()
+        results.append([it, 0, 0, 1, unfairness, 0, "relevance"])
+
+    return pd.DataFrame(results, columns=["it", "idcg", "dcg", "ndcg", "unfairness", "k", "theta"])
+
+
 def run_model(r, w, k, theta, D=20, iterations=350):
     # Attention so far
-    A = list(np.zeros(len(r)))
+    A = np.zeros(len(r))
     # Relevance so far
-    R = list(np.zeros(len(r)))
+    R = np.zeros(len(r))
+    r = np.asarray(r)
 
-    logger = get_simple_logger(level=logging.INFO)
-    # logger = get_simple_logger(level=logging.DEBUG)
     results = []
+    total_relevance = 0
 
     for iteration in range(1, iterations):
 
         ideal_ranking = np.argsort(r)[::-1]
-        idcg = dcg(k, np.asarray(r)[ideal_ranking])
+        idcg = dcg(k, r[ideal_ranking])
 
         selection = prefilter_selection(A, R, r, D, k)
-        _A = np.asarray(A)[selection]
-        _R = np.asarray(R)[selection]
-        _r = np.asarray(r)[selection]
+        _A = A[selection]
+        _R = R[selection]
+        _r = r[selection]
 
         m, x = build_model(_A, _R, _r, w, k, theta, idcg)
         m.verbose = 0
@@ -103,65 +117,55 @@ def run_model(r, w, k, theta, D=20, iterations=350):
             # Add attention each subject receives
             for rank, subject in enumerate(new_ranking):
                 A[subject] += w(rank)
+                if rank > k + 1:
+                    break
 
-            # For single query this should be just factor (needs to be checked)
-            R = list(np.asarray(R) + np.asarray(r))
+            # Add gained relevance
+            R += r
 
-            new_ranking_dcg = dcg(k, np.asarray(r)[new_ranking])
+            new_ranking_dcg = dcg(k, r[new_ranking])
             new_ranking_ndcg = new_ranking_dcg / idcg
             unfairness = compute_unfairness(A, R).sum()
+            total_relevance += r.sum()  # just a sanity check this should always be equation to it*1
 
-            logger.info(f"---- (theta:{theta}, k:{k}) ITERATION: {iteration} ----")
-            logger.info(f"Unfairness: \t\t\t\t\t\t{unfairness}")
+            logger.info(f"---- (theta:{theta}, k:{k}, D:{D}) ITERATION: {iteration} ----")
+            logger.info(f"Unfairness/total_relevance: \t\t{unfairness:0.2f}/{total_relevance:.2f}")
             logger.info(
                 f"New ranking DCG@{k},IDCG@{k}, NDCG@{k}: \t{new_ranking_dcg:0.3f}, {idcg:0.3f}, {new_ranking_ndcg:0.3f}")
             logger.debug(f"Relevance r_i: \t\t\t\t\t\t{r}")
             logger.debug(f"Optimal ranking: \t\t\t\t\t{ideal_ranking}")
             logger.debug(f"New ranking after iteration \t\t{np.asarray(new_ranking)}")
-            logger.debug(f"Attention accumulated: \t\t\t\t{np.asarray(A)}")
-            logger.debug(f"Relevance accumulated: \t\t\t\t{np.asarray(R)}")
+            logger.debug(f"Attention accumulated: \t\t\t\t{A}")
+            logger.debug(f"Relevance accumulated: \t\t\t\t{R}")
 
-            results.append([iteration, idcg, new_ranking_dcg, new_ranking_ndcg, unfairness, k, theta])
+            results.append([iteration, idcg, new_ranking_dcg, new_ranking_ndcg, unfairness, k, f'{theta}'])
         else:
             Exception("This should never happen")
-
     return pd.DataFrame(results, columns=["it", "idcg", "dcg", "ndcg", "unfairness", "k", "theta"])
 
 
-def store_results(results):
+def store_results(results, filename="results.csv"):
     os.makedirs("results", exist_ok=True)
-    results.to_csv("results/results.csv", float_format='%.3f', index=False)
+    results.to_csv("results/" + filename, float_format='%.3f', index=False)
 
 
-def toy_model():
-    THETA = 0.8
-    k = 3
-    # Current relevance
-    r = np.asarray([4, 3, 2, 1, 1, 6])
-    r = r / r.sum()
-
-    # Attention model
-    w = attention_geometric(k, 0.5)
-
-    results = run_model(r, w, k, THETA)
+def get_experiment_filename(exp: Experiment, attention_model):
+    return f"results_{exp.dataset}_k={exp.k}_{attention_model}.csv"
 
 
-def run_on_datasets():
-    THETA = 0.6
-    k = 1
+def run_experiment(exp: Experiment, include_baseline=True):
+    results = []
+    for theta in exp.thetas:
+        results.append(run_model(exp.dataset.relevance, exp.w, exp.k, theta, exp.D, exp.iterations))
 
-    ds = Synthetic("exponential", n=30000)
-    ds = Synthetic("uniform", n=25)
-    ds = AirBNBSingleQuery("data/boston.csv")
-    r = ds.relevance
+    if include_baseline:
+        results.append(relevance_model(exp.dataset.relevance, exp.w, exp.iterations))
 
-    # Attention model
-    # w = attention_geometric(25, 0.5)
-    w = attention_model_singular()
-
-    results = run_model(r, w, k, THETA, iterations=10000)
-    store_results(results)
+    return pd.concat(results)
 
 
 if __name__ == '__main__':
-    run_on_datasets()
+    # Executing from this file is for debugging
+    exp = Experiment(Synthetic("uniform", n=300), 1, attention_model_singular(), [0.6, 0.8, 1.0], 200, 35)
+    df = run_experiment(exp)
+    plot_results(df)
