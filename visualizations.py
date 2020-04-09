@@ -119,7 +119,7 @@ if __name__ == '__main__':
     os.makedirs("results", exist_ok=True)
 
     # Plot 0
-    # plot1_synthetic_singular()
+    plot1_synthetic_singular()
 
     # Plot 1
     plot2_synthetic_geometric()
