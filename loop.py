@@ -19,6 +19,9 @@ def build_model(A, R, r, w, k, theta, idcg):
     # Index variables
     I = [i for i in range(0, len(R))]
 
+    # Swap two values based on unfairness and probabilistic model
+    # I, A, R, r = perform_probabilistic_unfairness_swap(I, A, R, r)
+
     m = Model('ILP Fair ranking', )
 
     # Create the variables to be optimized
@@ -73,8 +76,18 @@ def swap(a, p1, p2):
     return a
 
 
-def swap_rankings(A, R, r, p1, p2):
-    return swap(A, p1, p2), swap(R, p1, p2), swap(r, p1, p2)
+def swap_rankings(I, A, R, r, p1, p2):
+    return swap(I, p1, p2), swap(A, p1, p2), swap(R, p1, p2), swap(r, p1, p2)
+
+
+def perform_probabilistic_unfairness_swap(I, A, R, r):
+    max_unfairness_index = get_max_unfairness(np.asarray(A) - np.asarray(R))
+    item_to_be_swapped = sample_top_k_value(k)
+
+    print("Index of ranking with max unfairness: " + str(max_unfairness_index))
+    print("Index of sample from top-k rankings: " + str(item_to_be_swapped))
+
+    return swap_rankings(I, A, R, r, max_unfairness_index, item_to_be_swapped)
 
 
 def prefilter_selection(A, R, r, D, k):
@@ -145,16 +158,7 @@ def run_model(r, w, k, theta, D=20, iterations=350):
 
             new_ranking_dcg = dcg(k, r[new_ranking])
             new_ranking_ndcg = new_ranking_dcg / idcg
-            unfairness = compute_unfairness(A, R)
-            unfairness_sum = unfairness.sum()
-
-            max_unfairness_index = get_max_unfairness(unfairness)
-            item_to_be_swapped = sample_top_k_value(k)
-
-            print("Index of ranking with max unfairness: " + str(max_unfairness_index))
-            print("Index of sample from top-k rankings: " + str(item_to_be_swapped))
-
-            A, R, r = swap_rankings(A, R, r, max_unfairness_index, item_to_be_swapped)
+            unfairness_sum = compute_unfairness(A, R).sum()
 
             total_relevance += r.sum()  # just a sanity check this should always be equation to it*1
 
