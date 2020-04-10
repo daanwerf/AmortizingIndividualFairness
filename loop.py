@@ -63,6 +63,10 @@ def get_max_unfairness(unfairness):
     return np.argmax(unfairness)
 
 
+def sample_top_k_value(k):
+    increasing_range = np.arange(k)
+    return np.random.choice(k, 1, p=[i/sum(increasing_range) for i in increasing_range])
+
 
 def prefilter_selection(A, R, r, D, k):
     k_top_relevant = np.argsort(r)[::-1]
@@ -136,7 +140,11 @@ def run_model(r, w, k, theta, D=20, iterations=350):
             unfairness_sum = unfairness.sum()
 
             max_unfairness_index = get_max_unfairness(unfairness)
+            item_to_be_swapped = sample_top_k_value(k)
 
+            print("k: " + str(k))
+            print("max_u_index: " + str(max_unfairness_index))
+            print("top_k_sampled: " + str(item_to_be_swapped))
 
             total_relevance += r.sum()  # just a sanity check this should always be equation to it*1
 
@@ -178,6 +186,8 @@ def run_experiment(exp: Experiment, include_baseline=True):
 
 if __name__ == '__main__':
     # Executing from this file is for debugging
-    exp = Experiment(Synthetic("uniform", n=300), 1, attention_model_singular(), [0.6, 0.8], 200, 35)
+    k = 5
+    p = 0.5
+    exp = Experiment(Synthetic("uniform", n=300), k, attention_geometric(k, p), [0.6, 0.8], 200, 35)
     df = run_experiment(exp)
     # plot_results(df)
