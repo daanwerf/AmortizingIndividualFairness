@@ -142,8 +142,8 @@ def run_model(r, w, k, theta, D=20, iterations=350):
             # array with the value on the i_th position indicates the subject at rank i
             new_ranking = convert_solution_to_ranking(x)
 
-            # if k > 1:
-            #     new_ranking = perform_probabilistic_unfairness_swap(max_unfairness_index, new_ranking, k)
+            if k > 1:
+                new_ranking = perform_probabilistic_unfairness_swap(max_unfairness_index, new_ranking, k)
 
             new_ranking = selection[new_ranking]
 
