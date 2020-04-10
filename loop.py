@@ -65,7 +65,16 @@ def get_max_unfairness(unfairness):
 
 def sample_top_k_value(k):
     increasing_range = np.arange(k)
-    return np.random.choice(k, 1, p=[i/sum(increasing_range) for i in increasing_range])
+    return np.random.choice(k, 1, p=[i/sum(increasing_range) for i in increasing_range])[0]
+
+
+def swap(a, p1, p2):
+    a[p1], a[p2] = a[p2], a[p1]
+    return a
+
+
+def swap_rankings(A, R, r, p1, p2):
+    return swap(A, p1, p2), swap(R, p1, p2), swap(r, p1, p2)
 
 
 def prefilter_selection(A, R, r, D, k):
@@ -142,9 +151,10 @@ def run_model(r, w, k, theta, D=20, iterations=350):
             max_unfairness_index = get_max_unfairness(unfairness)
             item_to_be_swapped = sample_top_k_value(k)
 
-            print("k: " + str(k))
-            print("max_u_index: " + str(max_unfairness_index))
-            print("top_k_sampled: " + str(item_to_be_swapped))
+            print("Index of ranking with max unfairness: " + str(max_unfairness_index))
+            print("Index of sample from top-k rankings: " + str(item_to_be_swapped))
+
+            A, R, r = swap_rankings(A, R, r, max_unfairness_index, item_to_be_swapped)
 
             total_relevance += r.sum()  # just a sanity check this should always be equation to it*1
 
