@@ -59,6 +59,10 @@ def compute_unfairness(A, R):
     return np.abs(np.asarray(A) - np.asarray(R))
 
 
+def get_max_unfairness(unfairness):
+    return np.argmax(unfairness)
+
+
 def prefilter_selection(A, R, r, D, k):
     k_top_relevant = np.argsort(r)[::-1]
     unfairness = np.asarray(A) - (np.asarray(R) + r)
@@ -128,6 +132,10 @@ def run_model(r, w, k, theta, D=20, iterations=350):
             new_ranking_dcg = dcg(k, r[new_ranking])
             new_ranking_ndcg = new_ranking_dcg / idcg
             unfairness = compute_unfairness(A, R).sum()
+
+            max_unfairness_index = get_max_unfairness(unfairness)
+
+
             total_relevance += r.sum()  # just a sanity check this should always be equation to it*1
 
             logger.info(f"---- (theta:{theta}, k:{k}, D:{D}) ITERATION: {iteration} ----")
