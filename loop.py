@@ -19,9 +19,6 @@ def build_model(A, R, r, w, k, theta, idcg):
     # Index variables
     I = [i for i in range(0, len(R))]
 
-    # Swap two values based on unfairness and probabilistic model
-    # I, A, R, r = perform_probabilistic_unfairness_swap(I, A, R, r)
-
     m = Model('ILP Fair ranking', )
 
     # Create the variables to be optimized
@@ -62,8 +59,8 @@ def compute_unfairness(A, R):
     return np.abs(np.asarray(A) - np.asarray(R))
 
 
-def get_max_unfairness(unfairness):
-    return np.argmax(unfairness)
+def compute_max_unfairness(A, R):
+    return np.argmin(np.asarray(A) - np.asarray(R))
 
 
 def sample_top_k_value(k):
@@ -76,18 +73,13 @@ def swap(a, p1, p2):
     return a
 
 
-def swap_rankings(I, A, R, r, p1, p2):
-    return swap(I, p1, p2), swap(A, p1, p2), swap(R, p1, p2), swap(r, p1, p2)
-
-
-def perform_probabilistic_unfairness_swap(I, A, R, r):
-    max_unfairness_index = get_max_unfairness(np.asarray(A) - np.asarray(R))
+def perform_probabilistic_unfairness_swap(max_unfairness_index, r, k):
     item_to_be_swapped = sample_top_k_value(k)
 
     print("Index of ranking with max unfairness: " + str(max_unfairness_index))
     print("Index of sample from top-k rankings: " + str(item_to_be_swapped))
 
-    return swap_rankings(I, A, R, r, max_unfairness_index, item_to_be_swapped)
+    return swap(r, max_unfairness_index, item_to_be_swapped)
 
 
 def prefilter_selection(A, R, r, D, k):
@@ -124,14 +116,18 @@ def run_model(r, w, k, theta, D=20, iterations=350):
     total_relevance = 0
 
     for iteration in range(1, iterations):
-
         ideal_ranking = np.argsort(r)[::-1]
         idcg = dcg(k, r[ideal_ranking])
 
         selection = prefilter_selection(A, R, r, D, k)
+
         _A = A[selection]
         _R = R[selection]
         _r = r[selection]
+
+        print(_A)
+        print(_R)
+        max_unfairness_index = compute_max_unfairness(_A, _R)
 
         m, x = build_model(_A, _R, _r, w, k, theta, idcg)
         m.verbose = 0
@@ -143,8 +139,12 @@ def run_model(r, w, k, theta, D=20, iterations=350):
             print(f"{iteration} Ranking with a total cost of {m.objective_value}")
             print("Number of solutions: %d" % m.num_solutions)
 
-            # array when the value on the i_th position indicates the subject at rank i
+            # array with the value on the i_th position indicates the subject at rank i
             new_ranking = convert_solution_to_ranking(x)
+
+            # if k > 1:
+            #     new_ranking = perform_probabilistic_unfairness_swap(max_unfairness_index, new_ranking, k)
+
             new_ranking = selection[new_ranking]
 
             # Add attention each subject receives
