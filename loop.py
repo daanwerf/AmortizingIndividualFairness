@@ -63,6 +63,7 @@ def get_max_unfairness(unfairness):
     return np.argmax(unfairness)
 
 
+
 def prefilter_selection(A, R, r, D, k):
     k_top_relevant = np.argsort(r)[::-1]
     unfairness = np.asarray(A) - (np.asarray(R) + r)
@@ -131,7 +132,8 @@ def run_model(r, w, k, theta, D=20, iterations=350):
 
             new_ranking_dcg = dcg(k, r[new_ranking])
             new_ranking_ndcg = new_ranking_dcg / idcg
-            unfairness = compute_unfairness(A, R).sum()
+            unfairness = compute_unfairness(A, R)
+            unfairness_sum = unfairness.sum()
 
             max_unfairness_index = get_max_unfairness(unfairness)
 
@@ -139,7 +141,7 @@ def run_model(r, w, k, theta, D=20, iterations=350):
             total_relevance += r.sum()  # just a sanity check this should always be equation to it*1
 
             logger.info(f"---- (theta:{theta}, k:{k}, D:{D}) ITERATION: {iteration} ----")
-            logger.info(f"Unfairness/total_relevance: \t\t{unfairness:0.2f}/{total_relevance:.2f}")
+            logger.info(f"Unfairness/total_relevance: \t\t{unfairness_sum:0.2f}/{total_relevance:.2f}")
             logger.info(
                 f"New ranking DCG@{k},IDCG@{k}, NDCG@{k}: \t{new_ranking_dcg:0.3f}, {idcg:0.3f}, {new_ranking_ndcg:0.3f}")
             logger.debug(f"Relevance r_i: \t\t\t\t\t\t{r}")
@@ -148,7 +150,7 @@ def run_model(r, w, k, theta, D=20, iterations=350):
             logger.debug(f"Attention accumulated: \t\t\t\t{A}")
             logger.debug(f"Relevance accumulated: \t\t\t\t{R}")
 
-            results.append([iteration, idcg, new_ranking_dcg, new_ranking_ndcg, unfairness, k, f'{theta}'])
+            results.append([iteration, idcg, new_ranking_dcg, new_ranking_ndcg, unfairness_sum, k, f'{theta}'])
         else:
             Exception("This should never happen")
     return pd.DataFrame(results, columns=["it", "idcg", "dcg", "ndcg", "unfairness", "k", "theta"])
