@@ -15,7 +15,7 @@ logger = get_simple_logger(level=logging.INFO)
 Experiment = namedtuple("Experiment", ['dataset', 'k', 'w', 'thetas', 'iterations', 'D'])
 
 
-def build_model(A, R, r, w, k, theta, idcg):
+def build_model(A, R, r, w, k, theta, idcg, extended):
     # Index variables
     I = [i for i in range(0, len(R))]
 
@@ -24,8 +24,13 @@ def build_model(A, R, r, w, k, theta, idcg):
     # Create the variables to be optimized
     x = [[m.add_var(var_type=BINARY) for j in I] for i in I]
 
-    # Create optimization function
-    m.objective = minimize(xsum(abs(A[i] * w(j) - (R[i] + r[i])) * x[i][j] for j in I for i in I))
+    if(extended):
+        # Create extended optimization function
+        m.objective = minimize(xsum((A[i] * w(j) - (R[i] + r[i]))**2 * x[i][j] for j in I for i in I))
+    else:
+        # Create original optimization function
+        m.objective = minimize(xsum(abs(A[i] * w(j) - (R[i] + r[i])) * x[i][j] for j in I for i in I))
+
 
     # Constraints
 
@@ -40,6 +45,7 @@ def build_model(A, R, r, w, k, theta, idcg):
     m += xsum(((2 ** r[i] - 1) / math.log(j + 2, 2)) * x[i][j] for i in I for j in range(0, k)) >= theta * idcg
 
     return m, x
+
 
 
 def convert_solution_to_ranking(x, verbose=False):
@@ -92,6 +98,9 @@ def run_model(r, w, k, theta, D=20, iterations=350):
     results = []
     total_relevance = 0
 
+    #Set this to true if you want to use the quadratic function
+    extended = True
+
     for iteration in range(1, iterations):
 
         ideal_ranking = np.argsort(r)[::-1]
@@ -102,7 +111,7 @@ def run_model(r, w, k, theta, D=20, iterations=350):
         _R = R[selection]
         _r = r[selection]
 
-        m, x = build_model(_A, _R, _r, w, k, theta, idcg)
+        m, x = build_model(_A, _R, _r, w, k, theta, idcg, extended)
         m.verbose = 0
         m.optimize()
 
@@ -157,6 +166,9 @@ def get_experiment_filename(exp: Experiment, attention_model):
 
 def run_experiment(exp: Experiment, include_baseline=True):
     results = []
+
+    #Set this to true if you want to use the extended minimize function
+
     for theta in exp.thetas:
         results.append(run_model(exp.dataset.relevance, exp.w, exp.k, theta, exp.D, exp.iterations))
 
@@ -167,6 +179,7 @@ def run_experiment(exp: Experiment, include_baseline=True):
 
 
 if __name__ == '__main__':
+
     # Executing from this file is for debugging
     exp = Experiment(Synthetic("uniform", n=300), 1, attention_model_singular(), [0.6, 0.8], 200, 35)
     df = run_experiment(exp)

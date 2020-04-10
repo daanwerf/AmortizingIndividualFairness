@@ -13,7 +13,7 @@ def load_or_run(exp, filename, overwrite=False):
     if os.path.exists("results/" + filename) and not overwrite:
         return pd.read_csv("results/" + filename)
     else:
-        df = run_experiment(exp)
+        df = run_experiment(exp, True)
         store_results(df, filename)
         return df
 

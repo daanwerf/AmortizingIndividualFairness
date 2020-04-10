@@ -2,7 +2,6 @@ cffi==1.14.0
 cycler==0.10.0
 kiwisolver==1.2.0
 matplotlib==3.2.1
-mip==1.6.8
 numpy==1.18.2
 pandas==1.0.3
 pycparser==2.20
