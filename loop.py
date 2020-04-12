@@ -1,5 +1,6 @@
 import math
 import os
+import sys
 from collections import namedtuple
 from sys import stdout as out, maxsize
 
@@ -59,8 +60,20 @@ def compute_unfairness(A, R):
     return np.abs(np.asarray(A) - np.asarray(R))
 
 
-def compute_max_unfairness(A, R):
-    return np.argmin(np.asarray(A) - np.asarray(R))
+def compute_max_unfairness(A, R, k):
+    min_value = sys.maxsize
+    unfairness = (np.asarray(A) - np.asarray(R))[::-1]
+    index = len(unfairness) - 1
+    result = -1
+
+    for item in unfairness:
+        if index > k-1 and item < min_value:
+            result = index
+            min_value = item
+
+        index = index - 1
+
+    return result
 
 
 def sample_top_k_value(k):
@@ -127,7 +140,7 @@ def run_model(r, w, k, theta, D=20, iterations=350):
 
         print(_A)
         print(_R)
-        max_unfairness_index = compute_max_unfairness(_A, _R)
+        max_unfairness_index = compute_max_unfairness(_A, _R, k)
 
         m, x = build_model(_A, _R, _r, w, k, theta, idcg)
         m.verbose = 0
