@@ -7,7 +7,6 @@ import pandas as pd
 from mip import Model, xsum, minimize, BINARY
 
 from core import *
-from datasets import Synthetic
 
 np.set_printoptions(precision=2)
 logger = get_simple_logger(level=logging.INFO)
@@ -25,7 +24,7 @@ def build_model(A, R, r, w, k, theta, idcg):
     x = [[m.add_var(var_type=BINARY) for j in I] for i in I]
 
     # Create optimization function
-    m.objective = minimize(xsum(abs(A[i] * w(j) - (R[i] + r[i])) * x[i][j] for j in I for i in I))
+    m.objective = minimize(xsum(abs(A[i] + w(j) - (R[i] + r[i])) * x[i][j] for j in I for i in I))
 
     # Constraints
 
@@ -79,7 +78,7 @@ def relevance_model(r, w, iterations=350):
         unfairness = np.abs((R - A[ideal_ranking])).sum()
         results.append([it, 0, 0, 1, unfairness, 0, "relevance"])
 
-    return pd.DataFrame(results, columns=["it", "idcg", "dcg", "ndcg", "unfairness", "k", "theta"])
+    return pd.DataFrame(results, columns=["it", "idcg", "dcg", "ndcg", "unfairness", "k", "model"])
 
 
 def run_model(r, w, k, theta, D=20, iterations=350):
@@ -140,13 +139,13 @@ def run_model(r, w, k, theta, D=20, iterations=350):
             logger.debug(f"Attention accumulated: \t\t\t\t{A}")
             logger.debug(f"Relevance accumulated: \t\t\t\t{R}")
 
-            results.append([iteration, idcg, new_ranking_dcg, new_ranking_ndcg, unfairness, k, f'{theta}'])
+            results.append([iteration, idcg, new_ranking_dcg, new_ranking_ndcg, unfairness, k, f'theta={theta}'])
         else:
             Exception("This should never happen")
-    return pd.DataFrame(results, columns=["it", "idcg", "dcg", "ndcg", "unfairness", "k", "theta"])
+    return pd.DataFrame(results, columns=["it", "idcg", "dcg", "ndcg", "unfairness", "k", "model"])
 
 
-def run_model_prob(r, k, w, iterations=350):
+def run_model_prob(r, k, w, iterations=350, D=50):
     # Attention so far
     A = np.zeros(len(r))
     # Relevance so far
@@ -164,10 +163,10 @@ def run_model_prob(r, k, w, iterations=350):
         new_ranking = ideal_ranking
 
         # Compute unfairness
-        U = A - (R + r)
+        U = A - R + r
 
-        # 50 most unfair objects
-        max_unfairness = np.argsort(U)[:50]
+        # Most unfair objects
+        max_unfairness = np.argsort(U)[:D]
 
         # Swap with prob
         u = U[max_unfairness]
@@ -178,7 +177,9 @@ def run_model_prob(r, k, w, iterations=350):
         sample = np.argmax(cdf_u > sample_u)
         swap_candidate = max_unfairness[sample]
 
-        new_ranking[0], new_ranking[swap_candidate] = new_ranking[swap_candidate], new_ranking[0]
+        # Swap with 0
+        swap_pos = np.random.geometric(p=0.7) - 1
+        new_ranking[swap_pos], new_ranking[swap_candidate] = new_ranking[swap_candidate], new_ranking[swap_pos]
 
         # Add gained relevance
         R += r
@@ -195,7 +196,7 @@ def run_model_prob(r, k, w, iterations=350):
         unfairness = compute_unfairness(A, R).sum()
         total_relevance += r.sum()  # just a sanity check this should always be equation to it*1
 
-        logger.info(f"---- (theta:, k:{k}, D:) ITERATION: {iteration} ----")
+        logger.info(f"---- (k:{k}, D:) ITERATION: {iteration} ----")
         logger.info(f"Unfairness/total_relevance: \t\t{unfairness:0.2f}/{total_relevance:.2f}")
         logger.info(
             f"New ranking DCG@{k},IDCG@{k}, NDCG@{k}: \t{new_ranking_dcg:0.3f}, {idcg:0.3f}, {new_ranking_ndcg:0.3f}")
@@ -205,9 +206,9 @@ def run_model_prob(r, k, w, iterations=350):
         logger.debug(f"Attention accumulated: \t\t\t\t{A}")
         logger.debug(f"Relevance accumulated: \t\t\t\t{R}")
 
-        results.append([iteration, idcg, new_ranking_dcg, new_ranking_ndcg, unfairness, k, f'prob'])
+        results.append([iteration, idcg, new_ranking_dcg, new_ranking_ndcg, unfairness, k, 'prob'])
 
-    return pd.DataFrame(results, columns=["it", "idcg", "dcg", "ndcg", "unfairness", "k", "theta"])
+    return pd.DataFrame(results, columns=["it", "idcg", "dcg", "ndcg", "unfairness", "k", "model"])
 
 
 def store_results(results, filename="results.csv"):
@@ -228,23 +229,3 @@ def run_experiment(exp: Experiment, include_baseline=True):
         results.append(relevance_model(exp.dataset.relevance, exp.w, exp.iterations))
 
     return pd.concat(results)
-
-
-if __name__ == '__main__':
-    # Executing from this file is for debugging
-    import matplotlib.pyplot as plt
-    import seaborn as sns
-
-    ds = Synthetic("uniform", n=300).relevance
-    ds = Synthetic("exponential", n=300).relevance
-    w = attention_model_singular()
-    df = run_model_prob(ds, 1, w)
-    df = pd.concat([df, relevance_model(ds, w, 350)])
-    fig = plt.figure()
-    g = sns.lineplot(data=df, x='it', y='unfairness', hue='theta', legend="full")
-    g.set(xlabel="iterations")
-
-    plt.show()
-    # exp = Experiment(Synthetic("uniform", n=300), 1, attention_model_singular(), [0.6, 0.8], 200, 35)
-    # df = run_experiment(exp)
-    # plot_results(df)
