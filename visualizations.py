@@ -9,7 +9,7 @@ from datasets import Synthetic
 from loop import Experiment, attention_model_singular, run_experiment, get_experiment_filename, store_results
 
 
-def load_or_run(exp, filename, overwrite=False):
+def load_or_run(exp, filename, overwrite=True):
     if os.path.exists("results/" + filename) and not overwrite:
         return pd.read_csv("results/" + filename)
     else:

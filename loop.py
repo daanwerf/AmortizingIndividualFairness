@@ -26,10 +26,13 @@ def build_model(A, R, r, w, k, theta, idcg, extended):
 
     if(extended):
         # Create extended optimization function
-        m.objective = minimize(xsum((A[i] * w(j) - (R[i] + r[i]))**2 * x[i][j] for j in I for i in I))
+        m.objective = minimize(xsum((A[i] + w(j) - (R[i] + r[i]))**2 * x[i][j] for j in I for i in I))
     else:
         # Create original optimization function
-        m.objective = minimize(xsum(abs(A[i] * w(j) - (R[i] + r[i])) * x[i][j] for j in I for i in I))
+        m.objective = minimize(xsum(abs(A[i] + w(j) - (R[i] + r[i])) * x[i][j] for j in I for i in I))
+
+    # Try with KL divergence
+    # Try with Jensen - Shannon divergence
 
 
     # Constraints
