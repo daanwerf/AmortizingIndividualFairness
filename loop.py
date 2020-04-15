@@ -146,6 +146,40 @@ def run_model(r, w, k, theta, D=20, iterations=350):
     return pd.DataFrame(results, columns=["it", "idcg", "dcg", "ndcg", "unfairness", "k", "theta"])
 
 
+def run_model_prob(r, k, iterations=350):
+    # Attention so far
+    A = np.zeros(len(r))
+    # Relevance so far
+    R = np.zeros(len(r))
+    r = np.asarray(r)
+
+    # Compute the ideal ranking
+    ideal_ranking = np.argsort(r)[::-1]
+    idcg = dcg(k, r[ideal_ranking])
+
+    for it in range(0, iterations):
+        # Compute unfairness
+        U = A - (R + r)
+
+        # 50 most unfair objects
+        max_unfairness = np.argsort(U)[:50]
+
+        # Swap with prob
+        u = U[max_unfairness]
+        u /= u.sum()
+
+        cdf_u = np.cumsum(u)
+        sample_u = np.random.rand()
+        sample = np.argmax(cdf_u > sample_u)
+        swap_canidate = max_unfairness[sample]
+
+        #
+
+        c = 1
+
+    return 1
+
+
 def store_results(results, filename="results.csv"):
     os.makedirs("results", exist_ok=True)
     results.to_csv("results/" + filename, float_format='%.3f', index=False)
@@ -168,6 +202,7 @@ def run_experiment(exp: Experiment, include_baseline=True):
 
 if __name__ == '__main__':
     # Executing from this file is for debugging
-    exp = Experiment(Synthetic("uniform", n=300), 1, attention_model_singular(), [0.6, 0.8], 200, 35)
-    df = run_experiment(exp)
+    df = run_model_prob(Synthetic("uniform", n=300).relevance, 1)
+    # exp = Experiment(Synthetic("uniform", n=300), 1, attention_model_singular(), [0.6, 0.8], 200, 35)
+    # df = run_experiment(exp)
     # plot_results(df)
