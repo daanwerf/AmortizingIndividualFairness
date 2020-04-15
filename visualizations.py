@@ -3,6 +3,7 @@ import os
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
+import numpy as np
 
 from core import attention_geometric
 from datasets import Synthetic
@@ -115,17 +116,43 @@ def plot2_synthetic_geometric():
     plt.show()
 
 
-def create_distribution_over_subjects(label, thetas, pad = False):
-    filenames = [label + "_" + str(t) + ".p" for t in thetas]
+def create_distribution_over_subjects(pad=False):
+    att_models = ["syn-exponential", "syn-linear", "syn-uniform"]
+    functions = ["L1", "L2"]
+    filenames = ["results" + "_" + str(t) + "_n=300_k=1_singular_" + str(f) for f in functions for t in att_models]
+
     header = ""
     if pad:
         header = "theta\tmean\t\tvar\t\t\t\t\std"
     else:
         header = "theta\tmean\t\tvar\t\tstd"
 
-    print(label)
+    for i, file_name in enumerate(filenames):
 
-    # for i, fn in enumerate(filenames):
+        #quadratic function L2
+        df_arr_L2 = pd.read_csv("resultss_unfar/" + file_name + "_L2.csv")
+        U_L2 = abs(df_arr_L2[:, 1] - df_arr_L2[:, 2])
+
+        #original function L1
+        df_arr_L1 = pd.read_csv("resultss_unfar/" + file_name + "_L1.csv")
+        U_L1 = abs(df_arr_L1[:, 1] - df_arr_L2[:, 2])
+
+        if i == 0:
+            print(header)
+        if not pad:
+            print('{:.1f}\t{:.3f}\t{:.3f}\t{:.3f}\t{:.3f}\t{:.3f}\t{:.3f}'.format(np.mean(U_L1), np.mean(U_L2),
+                                                                                  np.var(U_L1), np.var(U_L2),
+                                                                                  np.std(U_L1), np.std(U_L2)))
+        else:
+            print('{:.1f}\t{:.3f}\t{:.3f}\t{:8.3f}\t{:8.3f}\t{:8.3f}\t{:8.3f}'.format(np.mean(U_L1), np.mean(U_L2),
+                                                                                      np.var(U_L1), np.var(U_L2),
+                                                                                      np.std(U_L1), np.std(U_L2)))
+
+
+
+
+
+
 
 
 
