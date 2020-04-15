@@ -99,6 +99,7 @@ def run_model(r, w, k, theta, D=20, iterations=350):
     r = np.asarray(r)
 
     results = []
+    unfairness = []
     total_relevance = 0
 
     #Set this to true if you want to use the quadratic function
@@ -139,11 +140,14 @@ def run_model(r, w, k, theta, D=20, iterations=350):
 
             new_ranking_dcg = dcg(k, r[new_ranking])
             new_ranking_ndcg = new_ranking_dcg / idcg
-            unfairness = compute_unfairness(A, R).sum()
+
+            computed_unfairness = compute_unfairness(A,R)
+            unfairness.append([iteration, computed_unfairness])
+            unfairness_sum = computed_unfairness.sum()
             total_relevance += r.sum()  # just a sanity check this should always be equation to it*1
 
             logger.info(f"---- (theta:{theta}, k:{k}, D:{D}) ITERATION: {iteration} ----")
-            logger.info(f"Unfairness/total_relevance: \t\t{unfairness:0.2f}/{total_relevance:.2f}")
+            logger.info(f"Unfairness/total_relevance: \t\t{unfairness_sum:0.2f}/{total_relevance:.2f}")
             logger.info(
                 f"New ranking DCG@{k},IDCG@{k}, NDCG@{k}: \t{new_ranking_dcg:0.3f}, {idcg:0.3f}, {new_ranking_ndcg:0.3f}")
             logger.debug(f"Relevance r_i: \t\t\t\t\t\t{r}")
@@ -152,16 +156,20 @@ def run_model(r, w, k, theta, D=20, iterations=350):
             logger.debug(f"Attention accumulated: \t\t\t\t{A}")
             logger.debug(f"Relevance accumulated: \t\t\t\t{R}")
 
-            results.append([iteration, idcg, new_ranking_dcg, new_ranking_ndcg, unfairness, k, f'{theta}'])
+            results.append([iteration, idcg, new_ranking_dcg, new_ranking_ndcg, unfairness_sum, k, f'{theta}'])
         else:
             Exception("This should never happen")
-    return pd.DataFrame(results, columns=["it", "idcg", "dcg", "ndcg", "unfairness", "k", "theta"])
+    return pd.DataFrame(results, columns=["it", "idcg", "dcg", "ndcg", "unfairness", "k", "theta"]) , pd.DataFrame(unfairness, columns=["it", "unfairness"])
+
 
 
 def store_results(results, filename="results.csv"):
     os.makedirs("results", exist_ok=True)
     results.to_csv("results/" + filename, float_format='%.3f', index=False)
 
+def store_unfairness_array(unfairness_array, filename ="resultss.csv"):
+    os.makedirs("resultss_unfar", exist_ok=True)
+    unfairness_array.to_csv("resultss_unfar/" + filename, float_format='%.3f', index=False)
 
 def get_experiment_filename(exp: Experiment, attention_model):
     return f"results_{exp.dataset}_k={exp.k}_{attention_model}.csv"
@@ -170,15 +178,16 @@ def get_experiment_filename(exp: Experiment, attention_model):
 def run_experiment(exp: Experiment, include_baseline=True):
     results = []
 
-    #Set this to true if you want to use the extended minimize function
-
     for theta in exp.thetas:
-        results.append(run_model(exp.dataset.relevance, exp.w, exp.k, theta, exp.D, exp.iterations))
+        res, unfairness_arr = run_model(exp.dataset.relevance, exp.w, exp.k, theta, exp.D, exp.iterations)
+        results.append(res)
+
+        #results.append(run_model(exp.dataset.relevance, exp.w, exp.k, theta, exp.D, exp.iterations))
 
     if include_baseline:
         results.append(relevance_model(exp.dataset.relevance, exp.w, exp.iterations))
 
-    return pd.concat(results)
+    return pd.concat(results), unfairness_arr
 
 
 if __name__ == '__main__':

@@ -6,16 +6,17 @@ import seaborn as sns
 
 from core import attention_geometric
 from datasets import Synthetic
-from loop import Experiment, attention_model_singular, run_experiment, get_experiment_filename, store_results
+from loop import Experiment, attention_model_singular, run_experiment, get_experiment_filename, store_results, store_unfairness_array
 
 
-def load_or_run(exp, filename, overwrite=True):
+def load_or_run(exp, filename, overwrite=False):
     if os.path.exists("results/" + filename) and not overwrite:
         return pd.read_csv("results/" + filename)
     else:
-        df = run_experiment(exp, True)
-        store_results(df, filename)
-        return df
+        results_df, unf_arr_df = run_experiment(exp, True)
+        store_results(results_df, filename)
+        store_unfairness_array(unf_arr_df, filename)
+        return results_df,  unf_arr_df
 
 
 def plot_results(df):
@@ -41,7 +42,7 @@ def plot1_synthetic_singular():
     exp = Experiment(Synthetic("uniform", n=N), 1, attention_model_singular(), thetas, iterations, D)
 
     filename = get_experiment_filename(exp, "singular")
-    df = load_or_run(exp, filename, overwrite=overwrite)
+    df, unf_arr = load_or_run(exp, filename, overwrite=overwrite)
     g = sns.lineplot(data=df, x='it', y='unfairness', hue='theta', legend="full")
     g.set(xlabel="iterations")
 
@@ -50,7 +51,7 @@ def plot1_synthetic_singular():
     exp = Experiment(Synthetic("linear", n=N), 1, attention_model_singular(), thetas, iterations, D)
 
     filename = get_experiment_filename(exp, "singular")
-    df = load_or_run(exp, filename, overwrite=overwrite)
+    df, unf_arr = load_or_run(exp, filename, overwrite=overwrite)
     g = sns.lineplot(data=df, x='it', y='unfairness', hue='theta', legend="full")
     g.set(xlabel="iterations")
 
@@ -59,7 +60,7 @@ def plot1_synthetic_singular():
     exp = Experiment(Synthetic("exponential", n=N), 1, attention_model_singular(), thetas, iterations, D)
 
     filename = get_experiment_filename(exp, "singular")
-    df = load_or_run(exp, filename, overwrite=overwrite)
+    df, unf_arr = load_or_run(exp, filename, overwrite=overwrite)
     g = sns.lineplot(data=df, x='it', y='unfairness', hue='theta', legend="full")
     g.set(xlabel="iterations")
 
@@ -77,7 +78,7 @@ def plot2_synthetic_geometric():
     D = 50
     N = 300
     thetas = [0.0, 0.6, 0.8, 1.0]
-    overwrite = True
+    overwrite = False
     k = 5
     p = 0.5
 
@@ -86,7 +87,7 @@ def plot2_synthetic_geometric():
     exp = Experiment(Synthetic("uniform", n=N), k, attention_geometric(k, p), thetas, iterations, D)
 
     filename = get_experiment_filename(exp, "geometric")
-    df = load_or_run(exp, filename, overwrite=overwrite)
+    df, unf_arr = load_or_run(exp, filename, overwrite=overwrite)
     g = sns.lineplot(data=df, x='it', y='unfairness', hue='theta', legend="full")
     g.set(xlabel="iterations")
 
@@ -95,7 +96,7 @@ def plot2_synthetic_geometric():
     exp = Experiment(Synthetic("linear", n=N), k, attention_geometric(k, p), thetas, iterations, D)
 
     filename = get_experiment_filename(exp, "geometric")
-    df = load_or_run(exp, filename, overwrite=overwrite)
+    df, unf_arr = load_or_run(exp, filename, overwrite=overwrite)
     g = sns.lineplot(data=df, x='it', y='unfairness', hue='theta', legend="full")
     g.set(xlabel="iterations")
 
@@ -104,7 +105,7 @@ def plot2_synthetic_geometric():
     exp = Experiment(Synthetic("exponential", n=N), k, attention_geometric(k, p), thetas, iterations, D)
 
     filename = get_experiment_filename(exp, "geometric")
-    df = load_or_run(exp, filename, overwrite=overwrite)
+    df, unf_arr = load_or_run(exp, filename, overwrite=overwrite)
     g = sns.lineplot(data=df, x='it', y='unfairness', hue='theta', legend="full")
     g.set(xlabel="iterations")
 
@@ -114,12 +115,34 @@ def plot2_synthetic_geometric():
     plt.show()
 
 
+def create_distribution_over_subjects(label, thetas, pad = False):
+    filenames = [label + "_" + str(t) + ".p" for t in thetas]
+    header = ""
+    if pad:
+        header = "theta\tmean\t\tvar\t\t\t\t\std"
+    else:
+        header = "theta\tmean\t\tvar\t\tstd"
+
+    print(label)
+
+    # for i, fn in enumerate(filenames):
+
+
+
+
 if __name__ == '__main__':
     os.makedirs("plots", exist_ok=True)
     os.makedirs("results", exist_ok=True)
+    os.makedirs("tables", exist_ok=True)
 
     # Plot 0
     plot1_synthetic_singular()
 
     # Plot 1
     plot2_synthetic_geometric()
+
+    # Create a table for new distribution of unfairness over m subjects
+    #create_distribution_over_subjects()
+
+    # Create a plot for new distribution of unfairness over m subjects
+
