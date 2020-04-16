@@ -32,7 +32,7 @@ def plot1_synthetic_singular(overwrite=True):
     fig = plt.figure(figsize=(21 * scale, 6 * scale))
 
     iterations = 350
-    D = 25
+    D = 50
     N = 300
     thetas = [0.0, 0.6, 0.8, 1.0]
 
