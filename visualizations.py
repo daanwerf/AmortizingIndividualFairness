@@ -42,7 +42,7 @@ def plot1_synthetic_singular(overwrite=True):
 
     filename = get_experiment_filename(exp, "singular")
     df = load_or_run(exp, filename, overwrite=overwrite)
-    g = sns.lineplot(data=df, x='it', y='unfairness', hue='theta', legend="full")
+    g = sns.lineplot(data=df, x='it', y='unfairness', hue='model', legend="full")
     g.set(xlabel="iterations")
 
     # ------
@@ -51,7 +51,7 @@ def plot1_synthetic_singular(overwrite=True):
 
     filename = get_experiment_filename(exp, "singular")
     df = load_or_run(exp, filename, overwrite=overwrite)
-    g = sns.lineplot(data=df, x='it', y='unfairness', hue='theta', legend="full")
+    g = sns.lineplot(data=df, x='it', y='unfairness', hue='model', legend="full")
     g.set(xlabel="iterations")
 
     # ------
@@ -60,7 +60,7 @@ def plot1_synthetic_singular(overwrite=True):
 
     filename = get_experiment_filename(exp, "singular")
     df = load_or_run(exp, filename, overwrite=overwrite)
-    g = sns.lineplot(data=df, x='it', y='unfairness', hue='theta', legend="full")
+    g = sns.lineplot(data=df, x='it', y='unfairness', hue='model', legend="full")
     g.set(xlabel="iterations")
 
     plt.tight_layout()
@@ -86,7 +86,7 @@ def plot2_synthetic_geometric(overwrite=True):
 
     filename = get_experiment_filename(exp, "geometric")
     df = load_or_run(exp, filename, overwrite=overwrite)
-    g = sns.lineplot(data=df, x='it', y='unfairness', hue='theta', legend="full")
+    g = sns.lineplot(data=df, x='it', y='unfairness', hue='model', legend="full")
     g.set(xlabel="iterations")
 
     # ------
@@ -95,7 +95,7 @@ def plot2_synthetic_geometric(overwrite=True):
 
     filename = get_experiment_filename(exp, "geometric")
     df = load_or_run(exp, filename, overwrite=overwrite)
-    g = sns.lineplot(data=df, x='it', y='unfairness', hue='theta', legend="full")
+    g = sns.lineplot(data=df, x='it', y='unfairness', hue='model', legend="full")
     g.set(xlabel="iterations")
 
     # ------
@@ -104,7 +104,7 @@ def plot2_synthetic_geometric(overwrite=True):
 
     filename = get_experiment_filename(exp, "geometric")
     df = load_or_run(exp, filename, overwrite=overwrite)
-    g = sns.lineplot(data=df, x='it', y='unfairness', hue='theta', legend="full")
+    g = sns.lineplot(data=df, x='it', y='unfairness', hue='model', legend="full")
     g.set(xlabel="iterations")
 
     plt.tight_layout()
@@ -148,7 +148,7 @@ def plot3_prob(overwrite=True):
                   title=f"{ds} + {w_name}\n ndcg@{k}(μ, σ)=({mean_ndcg:.2f},{std_ndcg:.2f})")
 
     plt.tight_layout()
-    plt.savefig("plots/plot3.png")
+    plt.savefig("plots/plot_prob_extension.png")
     plt.show()
 
 
@@ -157,10 +157,10 @@ if __name__ == '__main__':
     os.makedirs("results", exist_ok=True)
 
     # Plot 0
-    # plot1_synthetic_singular(overwrite=True)
+    plot1_synthetic_singular(overwrite=True)
 
     # Plot 1
-    # plot2_synthetic_geometric(overwrite=True)
+    plot2_synthetic_geometric(overwrite=True)
 
     # Plot 2
     plot3_prob(overwrite=True)
