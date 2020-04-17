@@ -117,13 +117,13 @@ def plot3_prob(overwrite=True):
     scale = 0.7
     fig = plt.figure(figsize=(21 * scale, 12 * scale))
 
-    iterations = 800
+    iterations = 350
     N = 100
     k = 5
 
     attention_models = {
         'attention-singular': (attention_model_singular(), 1, 0.8, 1),  # model, k, rate, swaps
-        f'attention-geometric@{k}': (attention_geometric(k, 0.5), k, 0.5, 2)
+        f'attention-geometric@{k}': (attention_geometric(k, 0.5), k, 0.6, 3)
     }
 
     # ------
@@ -157,12 +157,12 @@ def plot3_prob_airbnb(overwrite=True):
     fig = plt.figure(figsize=(21 * scale, 12 * scale))
 
     iterations = 10000
-    k = 5
+    k = 10
     p = 0.5
 
     attention_models = {
         'attention-singular': (attention_model_singular(), 1, 0.8, 1),  # model, k, rate, swaps
-        f'attention-geometric@{k}': (attention_geometric(k, p), k, 0.5, 3)
+        f'attention-geometric@{k}': (attention_geometric(k, p), k, 0.6, 4)
     }
 
     # ------
@@ -197,13 +197,13 @@ if __name__ == '__main__':
     os.makedirs("results", exist_ok=True)
 
     # # Plot 1
-    # plot1_synthetic_singular(overwrite=True)
-    #
-    # # Plot 2
-    # plot2_synthetic_geometric(overwrite=True)
-    #
+    plot1_synthetic_singular(overwrite=True)
+
+    # Plot 2
+    plot2_synthetic_geometric(overwrite=True)
+
     # # Plot 3
-    # plot3_prob(overwrite=True)
+    plot3_prob(overwrite=True)
 
     # plot 4
     plot3_prob_airbnb(overwrite=True)
