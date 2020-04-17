@@ -32,7 +32,7 @@ def get_simple_logger(filename="out.log", level=logging.INFO):
     logger.addHandler(ch)
 
     ch = logging.StreamHandler()
-    ch.setLevel(logging.DEBUG)
+    ch.setLevel(logging.INFO)
     ch.setFormatter(formatter)
     logger.addHandler(ch)
 

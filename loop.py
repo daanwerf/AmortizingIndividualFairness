@@ -76,7 +76,7 @@ def relevance_model(r, w, iterations=350):
         A = wvec(ranks)
         R = r * it
         unfairness = np.abs((R - A[ideal_ranking])).sum()
-        results.append([it, 0, 0, 1, unfairness, 0, "relevance"])
+        results.append([it, 0, 0, -1, unfairness, 0, "relevance"])
 
     return pd.DataFrame(results, columns=["it", "idcg", "dcg", "ndcg", "unfairness", "k", "model"])
 
@@ -145,7 +145,7 @@ def run_model(r, w, k, theta, D=20, iterations=350):
     return pd.DataFrame(results, columns=["it", "idcg", "dcg", "ndcg", "unfairness", "k", "model"])
 
 
-def run_model_prob(r, k, w, iterations=350, D=50):
+def run_model_prob(r, k, w, iterations=350, D=50, swaps=1, rate=0.7):
     # Attention so far
     A = np.zeros(len(r))
     # Relevance so far
@@ -160,26 +160,42 @@ def run_model_prob(r, k, w, iterations=350, D=50):
     total_relevance = 0
 
     for iteration in range(0, iterations):
-        new_ranking = ideal_ranking
+        new_ranking = np.copy(ideal_ranking)
 
         # Compute unfairness
-        U = A - R + r
+        U = A - (R + r)
 
         # Most unfair objects
         max_unfairness = np.argsort(U)[:D]
 
         # Swap with prob
         u = U[max_unfairness]
-        u /= u.sum()
+        u[u >= 0] = 0
+        u = np.abs(u)
+        if u.sum() > 0:
+            u /= u.sum()
 
         cdf_u = np.cumsum(u)
-        sample_u = np.random.rand()
-        sample = np.argmax(cdf_u > sample_u)
-        swap_candidate = max_unfairness[sample]
 
-        # Swap with 0
-        swap_pos = np.random.geometric(p=0.7) - 1
-        new_ranking[swap_pos], new_ranking[swap_candidate] = new_ranking[swap_candidate], new_ranking[swap_pos]
+        swappend = set()
+        swap = 0
+        while swap < swaps:
+            sample_u = np.random.rand()
+            sample = np.argmax(cdf_u > sample_u)
+            swap_candidate = max_unfairness[sample]
+            cc = np.argmin(max_unfairness == sample)
+
+            # swap_pos = np.random.poisson(rate)
+            swap_pos = np.random.geometric(rate) - 1
+            swap_pos = min(swap_pos, len(new_ranking) - 1)
+            if swap_candidate in swappend and swap_pos in swappend:
+                continue
+            else:
+                swappend.add(swap_pos)
+                swappend.add(swap_candidate)
+
+            new_ranking[swap_pos], new_ranking[swap_candidate] = new_ranking[swap_candidate], new_ranking[swap_pos]
+            swap += 1
 
         # Add gained relevance
         R += r
@@ -196,10 +212,11 @@ def run_model_prob(r, k, w, iterations=350, D=50):
         unfairness = compute_unfairness(A, R).sum()
         total_relevance += r.sum()  # just a sanity check this should always be equation to it*1
 
-        logger.info(f"---- (k:{k}, D:) ITERATION: {iteration} ----")
-        logger.info(f"Unfairness/total_relevance: \t\t{unfairness:0.2f}/{total_relevance:.2f}")
-        logger.info(
-            f"New ranking DCG@{k},IDCG@{k}, NDCG@{k}: \t{new_ranking_dcg:0.3f}, {idcg:0.3f}, {new_ranking_ndcg:0.3f}")
+        if iteration % 100 == 0:
+            logger.info(f"---- (k:{k}, D:) ITERATION: {iteration} ----")
+            logger.info(f"Unfairness/total_relevance: \t\t{unfairness:0.2f}/{total_relevance:.2f}")
+            logger.info(
+                f"New ranking DCG@{k},IDCG@{k}, NDCG@{k}: \t{new_ranking_dcg:0.3f}, {idcg:0.3f}, {new_ranking_ndcg:0.3f}")
         logger.debug(f"Relevance r_i: \t\t\t\t\t\t{r}")
         logger.debug(f"Optimal ranking: \t\t\t\t\t{ideal_ranking}")
         logger.debug(f"New ranking after iteration \t\t{np.asarray(new_ranking)}")
