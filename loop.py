@@ -182,19 +182,19 @@ def run_model_prob(r, k, w, iterations=350, D=50, swaps=1, rate=0.7):
         while swap < swaps:
             sample_u = np.random.rand()
             sample = np.argmax(cdf_u > sample_u)
-            swap_candidate = max_unfairness[sample]
-            cc = np.argmin(max_unfairness == sample)
+            swap_candidate = max_unfairness[sample]  # index of most unfair cand sampled
+            swap_idx = np.where(new_ranking == swap_candidate)  # position in ranking
 
             # swap_pos = np.random.poisson(rate)
             swap_pos = np.random.geometric(rate) - 1
             swap_pos = min(swap_pos, len(new_ranking) - 1)
-            if swap_candidate in swappend and swap_pos in swappend:
+            if swap_candidate in swappend or swap_pos in swappend:
                 continue
             else:
                 swappend.add(swap_pos)
                 swappend.add(swap_candidate)
 
-            new_ranking[swap_pos], new_ranking[swap_candidate] = new_ranking[swap_candidate], new_ranking[swap_pos]
+            new_ranking[swap_pos], new_ranking[swap_idx] = new_ranking[swap_idx], new_ranking[swap_pos]
             swap += 1
 
         # Add gained relevance
