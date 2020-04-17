@@ -7,7 +7,6 @@ import pandas as pd
 from mip import Model, xsum, minimize, BINARY
 
 from core import *
-from datasets import Synthetic
 
 np.set_printoptions(precision=2)
 logger = get_simple_logger(level=logging.INFO)
@@ -25,7 +24,7 @@ def build_model(A, R, r, w, k, theta, idcg):
     x = [[m.add_var(var_type=BINARY) for j in I] for i in I]
 
     # Create optimization function
-    m.objective = minimize(xsum(abs(A[i] * w(j) - (R[i] + r[i])) * x[i][j] for j in I for i in I))
+    m.objective = minimize(xsum(abs(A[i] + w(j) - (R[i] + r[i])) * x[i][j] for j in I for i in I))
 
     # Constraints
 
@@ -77,9 +76,9 @@ def relevance_model(r, w, iterations=350):
         A = wvec(ranks)
         R = r * it
         unfairness = np.abs((R - A[ideal_ranking])).sum()
-        results.append([it, 0, 0, 1, unfairness, 0, "relevance"])
+        results.append([it, 0, 0, -1, unfairness, 0, "relevance"])
 
-    return pd.DataFrame(results, columns=["it", "idcg", "dcg", "ndcg", "unfairness", "k", "theta"])
+    return pd.DataFrame(results, columns=["it", "idcg", "dcg", "ndcg", "unfairness", "k", "model"])
 
 
 def run_model(r, w, k, theta, D=20, iterations=350):
@@ -140,10 +139,93 @@ def run_model(r, w, k, theta, D=20, iterations=350):
             logger.debug(f"Attention accumulated: \t\t\t\t{A}")
             logger.debug(f"Relevance accumulated: \t\t\t\t{R}")
 
-            results.append([iteration, idcg, new_ranking_dcg, new_ranking_ndcg, unfairness, k, f'{theta}'])
+            results.append([iteration, idcg, new_ranking_dcg, new_ranking_ndcg, unfairness, k, f'theta={theta}'])
         else:
             Exception("This should never happen")
-    return pd.DataFrame(results, columns=["it", "idcg", "dcg", "ndcg", "unfairness", "k", "theta"])
+    return pd.DataFrame(results, columns=["it", "idcg", "dcg", "ndcg", "unfairness", "k", "model"])
+
+
+def run_model_prob(r, k, w, iterations=350, D=50, swaps=1, rate=0.7):
+    # Attention so far
+    A = np.zeros(len(r))
+    # Relevance so far
+    R = np.zeros(len(r))
+    r = np.asarray(r)
+
+    # Compute the ideal ranking
+    ideal_ranking = np.argsort(r)[::-1]
+    idcg = dcg(k, r[ideal_ranking])
+    results = []
+
+    total_relevance = 0
+
+    for iteration in range(0, iterations):
+        new_ranking = np.copy(ideal_ranking)
+
+        # Compute unfairness
+        U = A - (R + r)
+
+        # Most unfair objects
+        max_unfairness = np.argsort(U)[:D]
+
+        # Swap with prob
+        u = U[max_unfairness]
+        u[u >= 0] = 0
+        u = np.abs(u)
+        if u.sum() > 0:
+            u /= u.sum()
+
+        cdf_u = np.cumsum(u)
+
+        swappend = set()
+        swap = 0
+        while swap < swaps:
+            sample_u = np.random.rand()
+            sample = np.argmax(cdf_u > sample_u)
+            swap_candidate = max_unfairness[sample]  # index of most unfair cand sampled
+            swap_idx = np.where(new_ranking == swap_candidate)  # position in ranking
+
+            # swap_pos = np.random.poisson(rate)
+            swap_pos = np.random.geometric(rate) - 1
+            swap_pos = min(swap_pos, len(new_ranking) - 1)
+            if swap_candidate in swappend or swap_pos in swappend:
+                continue
+            else:
+                swappend.add(swap_pos)
+                swappend.add(swap_candidate)
+
+            new_ranking[swap_pos], new_ranking[swap_idx] = new_ranking[swap_idx], new_ranking[swap_pos]
+            swap += 1
+
+        # Add gained relevance
+        R += r
+
+        # Add attention
+        # Add attention each subject receives
+        for rank, subject in enumerate(new_ranking):
+            A[subject] += w(rank)
+            if rank > k + 1:
+                break
+
+        new_ranking_dcg = dcg(k, r[new_ranking])
+        new_ranking_ndcg = new_ranking_dcg / idcg
+        unfairness = compute_unfairness(A, R).sum()
+        total_relevance += r.sum()  # just a sanity check this should always be equation to it*1
+
+        if iteration % 100 == 0:
+            logger.info(f"---- (k:{k}, D:) ITERATION: {iteration} ----")
+            logger.info(f"Unfairness/total_relevance: \t\t{unfairness:0.2f}/{total_relevance:.2f}")
+            logger.info(
+                f"New ranking DCG@{k},IDCG@{k}, NDCG@{k}: \t{new_ranking_dcg:0.3f}, {idcg:0.3f}, {new_ranking_ndcg:0.3f}")
+        logger.debug(f"Relevance r_i: \t\t\t\t\t\t{r}")
+        logger.debug(f"Optimal ranking: \t\t\t\t\t{ideal_ranking}")
+        logger.debug(f"New ranking after iteration \t\t{np.asarray(new_ranking)}")
+        logger.debug(f"Attention accumulated: \t\t\t\t{A}")
+        logger.debug(f"Relevance accumulated: \t\t\t\t{R}")
+
+        results.append([iteration, idcg, new_ranking_dcg, new_ranking_ndcg, unfairness, k, 'prob'])
+
+    return pd.DataFrame(results, columns=["it", "idcg", "dcg", "ndcg", "unfairness", "k", "model"])
 
 
 def store_results(results, filename="results.csv"):
@@ -164,10 +246,3 @@ def run_experiment(exp: Experiment, include_baseline=True):
         results.append(relevance_model(exp.dataset.relevance, exp.w, exp.iterations))
 
     return pd.concat(results)
-
-
-if __name__ == '__main__':
-    # Executing from this file is for debugging
-    exp = Experiment(Synthetic("uniform", n=300), 1, attention_model_singular(), [0.6, 0.8], 200, 35)
-    df = run_experiment(exp)
-    # plot_results(df)
